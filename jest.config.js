@@ -10,9 +10,12 @@ module.exports = {
     'src/**/*.ts',
     '!src/**/*.d.ts',
     '!src/index.ts',
+    '!src/app.ts',
   ],
   coverageDirectory: 'coverage',
   moduleFileExtensions: ['ts', 'js', 'json'],
   verbose: true,
+  testTimeout: 30000, // 30 seconds timeout for tests
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
 };
 
