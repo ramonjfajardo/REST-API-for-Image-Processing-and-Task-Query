@@ -1,0 +1,43 @@
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import { connectDatabase, disconnectDatabase } from '../src/config/database';
+import { Task } from '../src/models/Task';
+
+dotenv.config();
+
+/**
+ * Clear all data from database
+ */
+async function clearDatabase(): Promise<void> {
+  try {
+    console.log('Connecting to MongoDB...');
+    await connectDatabase();
+
+    console.log('Clearing all tasks...');
+    const result = await Task.deleteMany({});
+    console.log(`Deleted ${result.deletedCount} tasks`);
+
+    console.log('Database cleared successfully!');
+  } catch (error) {
+    console.error('Error clearing database:', error);
+    throw error;
+  } finally {
+    await disconnectDatabase();
+  }
+}
+
+// Run if called directly
+if (require.main === module) {
+  clearDatabase()
+    .then(() => {
+      console.log('Database clearing completed');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('Database clearing failed:', error);
+      process.exit(1);
+    });
+}
+
+export { clearDatabase };
+
