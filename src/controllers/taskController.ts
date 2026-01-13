@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { createTask, getTaskById, processTask } from '../services/taskService';
+import { createTask, getTaskById } from '../services/taskService';
+import { processTaskInBackground } from '../services/taskProcessor';
 import { CustomError } from '../middleware/errorHandler';
 import { TaskResponse, ImageResponse } from '../types';
 
@@ -18,10 +19,8 @@ export async function createTaskHandler(
     // Create task
     const task = await createTask(imagePath);
 
-    // Start processing asynchronously (don't await)
-    processTask(task._id.toString()).catch((error) => {
-      console.error(`Error processing task ${task._id}:`, error);
-    });
+    // Start processing in background (non-blocking)
+    processTaskInBackground(task._id.toString());
 
     // Return immediate response
     const response: TaskResponse = {
