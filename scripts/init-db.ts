@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
 import { connectDatabase, disconnectDatabase } from '../src/config/database';
 import { Task } from '../src/models/Task';
 
@@ -15,8 +14,8 @@ async function initializeDatabase(): Promise<void> {
 
     console.log('Creating indexes...');
     // Indexes are automatically created by Mongoose based on schema definitions
-    // But we can ensure they exist by calling ensureIndexes
-    await Task.collection.createIndexes();
+    // But we can ensure they exist by calling createIndexes
+    await Task.createIndexes();
 
     console.log('Database initialized successfully!');
     console.log('Indexes created:');

@@ -54,7 +54,7 @@ export function errorHandler(
   err: AppError | mongoose.Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   let error: CustomError;
 
@@ -109,7 +109,7 @@ export function errorHandler(
 /**
  * 404 Not Found handler
  */
-export function notFoundHandler(req: Request, res: Response, next: NextFunction): void {
+export function notFoundHandler(req: Request, _res: Response, next: NextFunction): void {
   const error = new CustomError(`Route ${req.originalUrl} not found`, 404);
   next(error);
 }

@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { TaskStatus, ITask, IImage } from '../types';
+import { ITask, IImage } from '../types';
 
-export interface TaskDocument extends ITask, Document {
+export interface TaskDocument extends Omit<ITask, '_id'>, Document {
   _id: mongoose.Types.ObjectId;
 }
 
@@ -19,7 +19,6 @@ const ImageSchema = new Schema<IImage>(
     md5: {
       type: String,
       required: true,
-      index: true,
     },
     createdAt: {
       type: Date,
@@ -36,7 +35,6 @@ const TaskSchema = new Schema<TaskDocument>(
       required: true,
       enum: ['pending', 'processing', 'completed', 'failed'],
       default: 'pending',
-      index: true,
     },
     price: {
       type: Number,

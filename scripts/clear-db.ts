@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
 import { connectDatabase, disconnectDatabase } from '../src/config/database';
 import { Task } from '../src/models/Task';
 

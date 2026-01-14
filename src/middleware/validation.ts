@@ -3,22 +3,25 @@ import { Request, Response, NextFunction } from 'express';
 import { CustomError } from './errorHandler';
 import { isURL } from '../utils/fileUtils';
 import * as path from 'path';
-import * as fs from 'fs/promises';
 
 /**
  * Validation middleware factory
  */
 export const validate = (validations: ValidationChain[]) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    await Promise.all(validations.map((validation) => validation.run(req)));
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      await Promise.all(validations.map((validation) => validation.run(req)));
 
-    const errors = validationResult(req);
-    if (errors.isEmpty()) {
-      return next();
+      const errors = validationResult(req);
+      if (errors.isEmpty()) {
+        return next();
+      }
+
+      const errorMessages = errors.array().map((err) => err.msg).join(', ');
+      return next(new CustomError(errorMessages, 400));
+    } catch (error) {
+      return next(error);
     }
-
-    const errorMessages = errors.array().map((err) => err.msg).join(', ');
-    throw new CustomError(errorMessages, 400);
   };
 };
 
