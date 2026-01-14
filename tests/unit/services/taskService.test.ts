@@ -6,7 +6,6 @@ import {
   updateTaskStatus,
   updateTaskWithImages,
 } from '../../../src/services/taskService';
-import { IImage } from '../../../src/types';
 
 describe('Task Service', () => {
   beforeAll(async () => {

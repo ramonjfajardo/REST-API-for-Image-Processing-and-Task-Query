@@ -15,7 +15,7 @@ import {
   OUTPUT_DIR,
 } from '../utils/fileUtils';
 import { IImage } from '../types';
-import { Image, ImageDocument } from '../models/Image';
+import { imageRepository } from '../adapters/mongoose/ImageRepository';
 
 const RESOLUTIONS = ['1024', '800'] as const;
 
@@ -103,25 +103,21 @@ export async function processImage(
       // Save processed image to filesystem
       await fs.writeFile(outputPath, resizedBuffer);
 
-      // Create and save image record to MongoDB Image collection
-      const imageRecord = new Image({
-        taskId,
-        resolution,
-        path: getRelativePath(outputPath),
-        md5,
-        createdAt: new Date(),
-      });
+      // Create and save image record using ImageRepository (adapter)
+      const imageRecord = await imageRepository.create(
+        {
+          taskId,
+          resolution,
+          path: getRelativePath(outputPath),
+          md5,
+          createdAt: new Date(),
+        },
+        session
+      );
 
-      // Save with session if provided (for transactions)
-      if (session) {
-        await imageRecord.save({ session });
-      } else {
-        await imageRecord.save();
-      }
-      
       // Store image ID for task reference
       imageIds.push(imageRecord._id);
-      
+
       // Also keep IImage format for compatibility
       processedImages.push({
         resolution,
@@ -140,7 +136,8 @@ export async function processImage(
       try {
         await fs.unlink(localImagePath);
       } catch (error) {
-        console.error('Failed to delete temporary file:', error);
+        const { logger } = require('../utils/logger');
+        logger.error('Failed to delete temporary file:', error);
       }
     }
   }

@@ -75,8 +75,9 @@ export function errorHandler(
   }
 
   // Log error
+  const { logger } = require('../utils/logger');
   if (process.env.NODE_ENV === 'development') {
-    console.error('Error Details:', {
+    logger.error('Error Details:', {
       message: error.message,
       statusCode: error.statusCode,
       stack: error.stack,
@@ -86,7 +87,7 @@ export function errorHandler(
   } else {
     // Production logging (can be enhanced with proper logging service)
     if (error.statusCode >= 500) {
-      console.error('Server Error:', {
+      logger.error('Server Error:', {
         message: error.message,
         statusCode: error.statusCode,
         url: req.originalUrl,

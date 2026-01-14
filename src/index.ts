@@ -22,8 +22,10 @@ async function startServer() {
 
     // Start server
     app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      // Use logger for consistent logging
+      const { logger } = require('./utils/logger');
+      logger.info(`Server is running on port ${PORT}`);
+      logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

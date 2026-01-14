@@ -44,7 +44,6 @@ const ImageSchema = new Schema<ImageDocument>(
 
 // Compound index for efficient queries
 ImageSchema.index({ taskId: 1, resolution: 1 });
-ImageSchema.index({ md5: 1 });
 
 export const Image = mongoose.model<ImageDocument>('Image', ImageSchema);
 

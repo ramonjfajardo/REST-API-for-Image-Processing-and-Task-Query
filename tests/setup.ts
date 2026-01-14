@@ -4,6 +4,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Mock background processing to avoid noisy logs and side effects during tests
+import * as taskProcessor from '../src/services/taskProcessor';
+// Replace the real background process starter with a no-op in tests
+jest.spyOn(taskProcessor, 'processTaskInBackground').mockImplementation(() => {});
+
 let mongoServer: MongoMemoryServer;
 
 /**

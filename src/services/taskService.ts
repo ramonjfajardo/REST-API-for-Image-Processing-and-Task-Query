@@ -1,32 +1,33 @@
 import mongoose from 'mongoose';
-import { Task, TaskDocument } from '../models/Task';
-import { TaskStatus, ITask, IImage } from '../types';
+import { taskRepository } from '../adapters/mongoose/TaskRepository';
+import { imageRepository } from '../adapters/mongoose/ImageRepository';
+import { TaskStatus } from '../types';
 import { generateRandomPrice } from '../utils/priceUtils';
 import { processImage } from './imageProcessingService';
+import { logger } from '../utils/logger';
 
 /**
  * Create a new task
  */
-export async function createTask(imagePath: string): Promise<TaskDocument> {
+export async function createTask(imagePath: string): Promise<any> {
   const price = generateRandomPrice(5, 50);
 
-  const task = new Task({
+  const task = await taskRepository.create({
     status: 'pending',
     price,
     originalPath: imagePath,
     images: [],
   });
 
-  await task.save();
   return task;
 }
 
 /**
  * Get task by ID with populated images
  */
-export async function getTaskById(taskId: string): Promise<TaskDocument | null> {
+export async function getTaskById(taskId: string): Promise<any | null> {
   try {
-    const task = await Task.findById(taskId).populate('images');
+    const task = await taskRepository.findById(taskId, true);
     return task;
   } catch (error) {
     return null;
@@ -40,17 +41,8 @@ export async function updateTaskStatus(
   taskId: string,
   status: TaskStatus,
   error?: string
-): Promise<TaskDocument | null> {
-  const updateData: Partial<ITask> = {
-    status,
-    updatedAt: new Date(),
-  };
-
-  if (error) {
-    updateData.error = error;
-  }
-
-  const task = await Task.findByIdAndUpdate(taskId, updateData, { new: true });
+): Promise<any | null> {
+  const task = await taskRepository.updateStatus(taskId, status, error);
   return task;
 }
 
@@ -59,17 +51,10 @@ export async function updateTaskStatus(
  */
 export async function updateTaskWithImages(
   taskId: string,
-  imageIds: mongoose.Types.ObjectId[]
-): Promise<TaskDocument | null> {
-  const task = await Task.findByIdAndUpdate(
-    taskId,
-    {
-      status: 'completed',
-      images: imageIds,
-      updatedAt: new Date(),
-    },
-    { new: true }
-  );
+  imageIds: mongoose.Types.ObjectId[],
+  session?: any
+): Promise<any | null> {
+  const task = await taskRepository.updateWithImages(taskId, imageIds, session);
   return task;
 }
 
@@ -105,7 +90,7 @@ async function supportsTransactions(): Promise<boolean> {
     return supports;
   } catch (error) {
     // If we can't determine, assume no transactions (safer for standalone)
-    console.warn('[TaskService] Could not determine transaction support, assuming standalone MongoDB:', error);
+    logger.warn('[TaskService] Could not determine transaction support, assuming standalone MongoDB:', error);
     transactionSupportCache = false;
     return false;
   }
@@ -134,24 +119,16 @@ export async function processTask(taskId: string): Promise<void> {
     if (useTransactions) {
       // Try to use transactions for atomic updates (replica set or sharded cluster)
       try {
-        console.log(`[TaskService] Using MongoDB transactions for task ${taskId}`);
-        const session = await mongoose.startSession();
+        logger.info(`[TaskService] Using MongoDB transactions for task ${taskId}`);
+        const session = await taskRepository.startSession();
         session.startTransaction();
 
         try {
           // Process image and save to Image collection (within transaction)
           const result = await processImage(task.originalPath, task._id, session);
 
-          // Update task with processed image IDs in transaction
-          await Task.findByIdAndUpdate(
-            taskId,
-            {
-              status: 'completed',
-              images: result.imageIds,
-              updatedAt: new Date(),
-            },
-            { new: true, session }
-          );
+          // Update task with processed image IDs in transaction via repository
+          await taskRepository.updateWithImages(taskId, result.imageIds, session);
 
           // Commit transaction to ensure both collections are updated atomically
           await session.commitTransaction();
@@ -173,7 +150,7 @@ export async function processTask(taskId: string): Promise<void> {
           transactionError?.message?.includes('Transaction numbers are only allowed') ||
           transactionError?.message?.includes('not a replica set')
         ) {
-          console.warn(
+          logger.warn(
             `[TaskService] Transaction not supported, falling back to sequential operations for task ${taskId}`
           );
           // Reset cache and use sequential operations
@@ -188,7 +165,7 @@ export async function processTask(taskId: string): Promise<void> {
 
     // Sequential operations (standalone MongoDB or transaction fallback)
     if (useSequential) {
-      console.log(`[TaskService] Using sequential operations (standalone MongoDB) for task ${taskId}`);
+      logger.info(`[TaskService] Using sequential operations (standalone MongoDB) for task ${taskId}`);
       const imageIds: mongoose.Types.ObjectId[] = [];
       try {
         // Process image and save to Image collection
@@ -197,24 +174,15 @@ export async function processTask(taskId: string): Promise<void> {
         // Store image IDs for potential cleanup
         imageIds.push(...result.imageIds);
 
-        // Update task with processed image IDs
-        await Task.findByIdAndUpdate(
-          taskId,
-          {
-            status: 'completed',
-            images: result.imageIds,
-            updatedAt: new Date(),
-          },
-          { new: true }
-        );
+        // Update task with processed image IDs via repository
+        await taskRepository.updateWithImages(taskId, result.imageIds);
       } catch (processingError) {
         // Cleanup: delete any images that were created if task update fails
         if (imageIds.length > 0) {
           try {
-            const { Image } = await import('../models/Image');
-            await Image.deleteMany({ _id: { $in: imageIds } });
+            await imageRepository.deleteManyByIds(imageIds);
           } catch (cleanupError) {
-            console.error('Error cleaning up images:', cleanupError);
+            logger.error('Error cleaning up images:', cleanupError);
           }
         }
         throw processingError;
