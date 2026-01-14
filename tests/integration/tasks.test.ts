@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import app from '../../src/app';
 import { setupTestDatabase, teardownTestDatabase, clearDatabase } from '../setup';
 import { Task } from '../../src/models/Task';
+import { Image } from '../../src/models/Image';
 
 describe('Tasks API Integration Tests', () => {
   beforeAll(async () => {
@@ -125,25 +126,29 @@ describe('Tasks API Integration Tests', () => {
       // Wait a bit for background processing to start/fail
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Manually update task to completed with images (override any background processing)
+      // Manually create images in Image collection and link to task (override any background processing)
+      const image1 = await Image.create({
+        taskId: new mongoose.Types.ObjectId(taskId),
+        resolution: '1024',
+        path: '/output/image1/1024/abc123.jpg',
+        md5: 'abc123',
+        createdAt: new Date(),
+      });
+
+      const image2 = await Image.create({
+        taskId: new mongoose.Types.ObjectId(taskId),
+        resolution: '800',
+        path: '/output/image1/800/def456.jpg',
+        md5: 'def456',
+        createdAt: new Date(),
+      });
+
+      // Update task to completed with image references
       await Task.findByIdAndUpdate(
         taskId,
         {
           status: 'completed',
-          images: [
-            {
-              resolution: '1024',
-              path: '/output/image1/1024/abc123.jpg',
-              md5: 'abc123',
-              createdAt: new Date(),
-            },
-            {
-              resolution: '800',
-              path: '/output/image1/800/def456.jpg',
-              md5: 'def456',
-              createdAt: new Date(),
-            },
-          ],
+          images: [image1._id, image2._id],
         },
         { overwrite: false }
       );

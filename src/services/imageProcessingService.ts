@@ -1,6 +1,7 @@
 import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import mongoose from 'mongoose';
 import {
   ensureDirectoryExists,
   calculateMD5FromBuffer,
@@ -14,18 +15,26 @@ import {
   OUTPUT_DIR,
 } from '../utils/fileUtils';
 import { IImage } from '../types';
+import { Image, ImageDocument } from '../models/Image';
 
 const RESOLUTIONS = ['1024', '800'] as const;
 
 export interface ProcessImageResult {
+  imageIds: mongoose.Types.ObjectId[];
   images: IImage[];
 }
 
 /**
  * Process an image and create variants at specified resolutions
+ * Saves images to the Image collection in MongoDB
+ * @param imagePathOrUrl - Path or URL to the image
+ * @param taskId - Task ID to associate images with
+ * @param session - Optional MongoDB session for transactions
  */
 export async function processImage(
-  imagePathOrUrl: string
+  imagePathOrUrl: string,
+  taskId: mongoose.Types.ObjectId,
+  session?: mongoose.ClientSession
 ): Promise<ProcessImageResult> {
   let localImagePath: string = imagePathOrUrl;
   let isTempFile = false;
@@ -62,6 +71,7 @@ export async function processImage(
     await ensureDirectoryExists(OUTPUT_DIR);
 
     const processedImages: IImage[] = [];
+    const imageIds: mongoose.Types.ObjectId[] = [];
 
     // Process each resolution
     for (const resolution of RESOLUTIONS) {
@@ -90,21 +100,38 @@ export async function processImage(
         originalExtension
       );
 
-      // Save processed image
+      // Save processed image to filesystem
       await fs.writeFile(outputPath, resizedBuffer);
 
-      // Create image record
-      const imageRecord: IImage = {
+      // Create and save image record to MongoDB Image collection
+      const imageRecord = new Image({
+        taskId,
         resolution,
         path: getRelativePath(outputPath),
         md5,
         createdAt: new Date(),
-      };
+      });
 
-      processedImages.push(imageRecord);
+      // Save with session if provided (for transactions)
+      if (session) {
+        await imageRecord.save({ session });
+      } else {
+        await imageRecord.save();
+      }
+      
+      // Store image ID for task reference
+      imageIds.push(imageRecord._id);
+      
+      // Also keep IImage format for compatibility
+      processedImages.push({
+        resolution,
+        path: imageRecord.path,
+        md5: imageRecord.md5,
+        createdAt: imageRecord.createdAt,
+      });
     }
 
-    return { images: processedImages };
+    return { imageIds, images: processedImages };
   } catch (error) {
     throw new Error(`Image processing failed: ${error instanceof Error ? error.message : String(error)}`);
   } finally {

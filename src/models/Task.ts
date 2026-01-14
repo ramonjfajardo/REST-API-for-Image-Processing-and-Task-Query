@@ -1,32 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { ITask, IImage } from '../types';
+import { ITask } from '../types';
 
-export interface TaskDocument extends Omit<ITask, '_id'>, Document {
+export interface TaskDocument extends Omit<ITask, '_id' | 'images'>, Document {
   _id: mongoose.Types.ObjectId;
+  images: mongoose.Types.ObjectId[];
 }
-
-const ImageSchema = new Schema<IImage>(
-  {
-    resolution: {
-      type: String,
-      required: true,
-      enum: ['1024', '800'],
-    },
-    path: {
-      type: String,
-      required: true,
-    },
-    md5: {
-      type: String,
-      required: true,
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  { _id: false }
-);
 
 const TaskSchema = new Schema<TaskDocument>(
   {
@@ -47,7 +25,8 @@ const TaskSchema = new Schema<TaskDocument>(
       required: true,
     },
     images: {
-      type: [ImageSchema],
+      type: [Schema.Types.ObjectId],
+      ref: 'Image',
       default: [],
     },
     error: {
@@ -62,7 +41,7 @@ const TaskSchema = new Schema<TaskDocument>(
 // Indexes for efficient queries
 TaskSchema.index({ status: 1 });
 TaskSchema.index({ createdAt: -1 });
-TaskSchema.index({ 'images.md5': 1 });
+TaskSchema.index({ images: 1 });
 
 export const Task = mongoose.model<TaskDocument>('Task', TaskSchema);
 

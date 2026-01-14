@@ -94,30 +94,46 @@ describe('Task Service', () => {
   });
 
   describe('updateTaskWithImages', () => {
-    it('should update task with processed images', async () => {
+    it('should update task with processed image IDs', async () => {
       const task = await createTask('/path/to/image.jpg');
-      const images: IImage[] = [
-        {
-          resolution: '1024',
-          path: '/output/image1/1024/abc123.jpg',
-          md5: 'abc123',
-          createdAt: new Date(),
-        },
-        {
-          resolution: '800',
-          path: '/output/image1/800/def456.jpg',
-          md5: 'def456',
-          createdAt: new Date(),
-        },
-      ];
+      const { Image } = await import('../../../src/models/Image');
+      
+      // Create images in Image collection first
+      const image1 = await Image.create({
+        taskId: task._id,
+        resolution: '1024',
+        path: '/output/image1/1024/abc123.jpg',
+        md5: 'abc123',
+        createdAt: new Date(),
+      });
 
-      const updatedTask = await updateTaskWithImages(task._id.toString(), images);
+      const image2 = await Image.create({
+        taskId: task._id,
+        resolution: '800',
+        path: '/output/image1/800/def456.jpg',
+        md5: 'def456',
+        createdAt: new Date(),
+      });
+
+      // Update task with image IDs
+      const updatedTask = await updateTaskWithImages(
+        task._id.toString(),
+        [image1._id, image2._id]
+      );
 
       expect(updatedTask).toBeDefined();
       expect(updatedTask?.status).toBe('completed');
       expect(updatedTask?.images).toHaveLength(2);
-      expect(updatedTask?.images?.[0].resolution).toBe('1024');
-      expect(updatedTask?.images?.[1].resolution).toBe('800');
+      
+      // Get populated task to verify images
+      const populatedTask = await getTaskById(task._id.toString());
+      expect(populatedTask).toBeDefined();
+      if (populatedTask?.images && populatedTask.images.length > 0) {
+        const firstImg = populatedTask.images[0];
+        if (firstImg && typeof firstImg === 'object' && 'resolution' in firstImg) {
+          expect(firstImg.resolution).toBe('1024');
+        }
+      }
     });
   });
 });

@@ -60,13 +60,15 @@ export async function getTaskHandler(
     };
 
     // Include images if task is completed
+    // Note: getTaskById populates images, so they should be ImageDocument objects
     if (task.status === 'completed' && task.images && task.images.length > 0) {
-      response.images = task.images.map(
-        (img): ImageResponse => ({
+      // Images should be populated ImageDocuments
+      response.images = task.images
+        .filter((img): img is any => img && typeof img === 'object' && 'resolution' in img)
+        .map((img): ImageResponse => ({
           resolution: img.resolution,
           path: img.path,
-        })
-      );
+        }));
     }
 
     res.status(200).json(response);

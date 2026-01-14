@@ -5,7 +5,7 @@ export interface ITask {
   status: TaskStatus;
   price: number;
   originalPath: string;
-  images?: IImage[];
+  images?: IImage[] | string[]; // Can be IImage[] when populated, or ObjectId[] when not
   createdAt?: Date;
   updatedAt?: Date;
   error?: string;
