@@ -192,7 +192,7 @@ Create a new image processing task.
 **Request Body:**
 ```json
 {
-  "imagePath": "/path/to/image.jpg"
+  "imagePath": "/input/image.jpg"
 }
 ```
 

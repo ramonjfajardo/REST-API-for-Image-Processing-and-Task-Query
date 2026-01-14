@@ -115,9 +115,22 @@ export function getProcessedImagePath(
  * Get relative path for API response (e.g., /output/image1/1024/abc123.jpg)
  */
 export function getRelativePath(fullPath: string): string {
-  const normalizedPath = path.normalize(fullPath);
-  // Convert backslashes to forward slashes for API responses
-  return normalizedPath.replace(/\\/g, '/');
+  // Normalize and convert backslashes to forward slashes
+  const normalizedPath = path.normalize(fullPath).replace(/\\/g, '/');
+
+  // If path is inside the current working directory, remove the cwd prefix for a cleaner relative path
+  const cwdNormalized = path.normalize(process.cwd()).replace(/\\/g, '/');
+  let relative = normalizedPath;
+  if (normalizedPath.startsWith(cwdNormalized)) {
+    relative = normalizedPath.slice(cwdNormalized.length);
+  }
+
+  // Ensure a single leading slash for API responses (e.g., '/output/image.jpg')
+  if (!relative.startsWith('/')) {
+    relative = '/' + relative;
+  }
+
+  return relative;
 }
 
 export { OUTPUT_DIR, INPUT_DIR };

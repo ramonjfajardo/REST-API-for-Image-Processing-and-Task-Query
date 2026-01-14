@@ -32,6 +32,20 @@ describe('Tasks API Integration Tests', () => {
       expect(response.body.price).toBeLessThanOrEqual(50);
     });
 
+    it('should store /input/ paths as-is (not converted to localhost URL)', async () => {
+      const response = await request(app).post('/tasks').send({
+        imagePath: '/input/image1/1024/abc123.jpg',
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toHaveProperty('taskId');
+
+      // Verify the stored task originalPath is stored as local input path
+      const task = await Task.findById(response.body.taskId);
+      expect(task).toBeDefined();
+      expect(task?.originalPath).toBe('/input/image1/1024/abc123.jpg');
+    });
+
     it('should create a task with URL', async () => {
       const response = await request(app).post('/tasks').send({
         imagePath: 'https://example.com/image.jpg',

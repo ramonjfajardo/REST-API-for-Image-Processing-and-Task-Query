@@ -14,7 +14,14 @@ export async function createTaskHandler(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { imagePath } = req.body;
+    const { imagePath: rawImagePath } = req.body;
+
+    // Normalize local input directory references (keep them as '/input/...' so they are stored as local paths)
+    let imagePath = rawImagePath;
+    if (typeof rawImagePath === 'string' && /^\/?input\//.test(rawImagePath)) {
+      // Ensure a single leading slash and preserve the 'input/...' prefix
+      imagePath = '/' + rawImagePath.replace(/^\/+/, '');
+    }
 
     // Create task
     const task = await createTask(imagePath);

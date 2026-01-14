@@ -83,16 +83,16 @@ describe('File Utils', () => {
   });
 
   describe('getRelativePath', () => {
-    it('should convert backslashes to forward slashes', () => {
+    it('should convert backslashes to forward slashes and add leading slash', () => {
       const windowsPath = 'output\\image\\1024\\file.jpg';
       const result = getRelativePath(windowsPath);
-      expect(result).toBe('output/image/1024/file.jpg');
+      expect(result).toBe('/output/image/1024/file.jpg');
     });
 
-    it('should normalize path', () => {
+    it('should normalize path and add leading slash', () => {
       const path = './output/../output/image.jpg';
       const result = getRelativePath(path);
-      expect(result).toBe('output/image.jpg');
+      expect(result).toBe('/output/image.jpg');
     });
   });
 });

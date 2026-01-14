@@ -13,6 +13,7 @@ import {
   downloadFile,
   fileExists,
   OUTPUT_DIR,
+  INPUT_DIR,
 } from '../utils/fileUtils';
 import { IImage } from '../types';
 import { imageRepository } from '../adapters/mongoose/ImageRepository';
@@ -40,6 +41,13 @@ export async function processImage(
   let isTempFile = false;
 
   try {
+    // If path refers to the app's input directory (e.g., '/input/...' or 'input/...'),
+    // map it to the actual filesystem path so it can be read directly.
+    if (!isURL(imagePathOrUrl) && /^\/?input\//.test(imagePathOrUrl)) {
+      const cleaned = imagePathOrUrl.replace(/^\/?input\//, '');
+      localImagePath = path.join(process.cwd(), INPUT_DIR, cleaned);
+    }
+
     // Handle URL downloads
     if (isURL(imagePathOrUrl)) {
       const tempDir = path.join(process.cwd(), 'temp');
